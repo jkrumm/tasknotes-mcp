@@ -16,7 +16,7 @@ Return scheduled/due as YYYY-MM-DD or null. If no explicit date, scheduled defau
 export async function parseWithGemini(text: string, availableProjects: string[]): Promise<NlpParseResult> {
   const today = new Date().toISOString().slice(0, 10)
   const { object } = await generateObject({
-    model: google('gemini-2.0-flash'),
+    model: google('gemini-3-flash-preview'),
     schema: NlpParseResultSchema,
     system: buildSystemPrompt(today, availableProjects),
     prompt: text,
