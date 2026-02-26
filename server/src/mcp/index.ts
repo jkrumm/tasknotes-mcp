@@ -20,14 +20,14 @@ mcp.tool('list_tasks', {
     scheduled: z.string().optional().describe('Filter by scheduled date (YYYY-MM-DD)'),
   }),
   handler: async ({ status, priority, context, overdue, scheduled }) => {
-    const query: Record<string, string> = {}
-    if (status) query.status = status
-    if (priority) query.priority = priority
-    if (context) query.context = context
-    if (overdue) query.overdue = 'true'
-    if (scheduled) query.scheduled = scheduled
-    const data = await fetchTasks(query)
-    return { content: [{ type: 'text' as const, text: JSON.stringify(data.tasks, null, 2) }] }
+    const data = await fetchTasks()
+    let tasks = data.tasks.filter((t) => !t.archived)
+    if (status) tasks = tasks.filter((t) => t.status === status)
+    if (priority) tasks = tasks.filter((t) => t.priority === priority)
+    if (context) tasks = tasks.filter((t) => t.contexts.includes(context))
+    if (overdue) tasks = tasks.filter((t) => t.due && t.due < new Date().toISOString().slice(0, 10))
+    if (scheduled) tasks = tasks.filter((t) => t.scheduled === scheduled)
+    return { content: [{ type: 'text' as const, text: JSON.stringify(tasks, null, 2) }] }
   },
 })
 
