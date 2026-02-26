@@ -15,11 +15,16 @@ export const nlpApi = new Elysia({ prefix: '/nlp' })
 
   .post('/create', async ({ body }) => {
     const options = await fetchFilterOptions()
-    const knownProjects = new Set(options.projects.map((p) => p.replace(/^\[\[|\]\]$/g, '')))
-    const parsed = await parseWithGemini(body.text, [...knownProjects])
+    // Case-insensitive lookup: lowercase key → canonical project name from Obsidian
+    const projectMap = new Map(
+      options.projects
+        .map((p) => p.replace(/^\[\[|\]\]$/g, ''))
+        .map((p) => [p.toLowerCase(), p]),
+    )
+    const parsed = await parseWithGemini(body.text, [...projectMap.values()])
 
-    const project = parsed.project && knownProjects.has(parsed.project) ? parsed.project : undefined
-    if (parsed.project && !knownProjects.has(parsed.project)) {
+    const matchedProject = parsed.project ? projectMap.get(parsed.project.toLowerCase()) : undefined
+    if (parsed.project && !matchedProject) {
       console.warn(`[nlp/create] Unknown project returned by Gemini: "${parsed.project}" — omitting`)
     }
 
@@ -27,7 +32,7 @@ export const nlpApi = new Elysia({ prefix: '/nlp' })
       title: parsed.title,
       contexts: parsed.context ? [parsed.context] : ['dev'],
       priority: parsed.priority ?? 'normal',
-      projects: project ? [project] : [],
+      projects: matchedProject ? [matchedProject] : [],
       scheduled: parsed.scheduled ?? undefined,
       due: parsed.due ?? undefined,
     })

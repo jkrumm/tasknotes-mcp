@@ -4,12 +4,23 @@ import { NlpParseResultSchema } from '@/types'
 import type { NlpParseResult } from '@/types'
 
 function buildSystemPrompt(today: string, availableProjects: string[]): string {
+  const projectList = availableProjects.length ? availableProjects.join(', ') : 'none'
   return `Today: ${today}
-Contexts (pick 1): dev, work, life, infra
-Available projects: ${availableProjects.join(', ')}
+
+Contexts (required, pick exactly one):
+- dev: coding, programming, software tasks (basalt-ui, rollhook, open-news, free-planning-poker, any code work)
+- work: IU university, courses, PR/reviews, meetings, non-coding professional tasks
+- life: personal, health, shopping, errands, social
+- infra: homelab, server, docker, networking, infrastructure
+
+Available projects: ${projectList}
 Priorities: none, low, normal, high (default: normal)
-Context mapping: dev=coding/basalt/rollhook/open-news, work=iu/PR/review/meeting, life=personal/buy/health, infra=server/homelab/docker
-Common abbreviations: basalt=basalt-ui, fpp/poker=free-planning-poker, news=open-news
+
+Project rules:
+- Only assign a project if the task explicitly or strongly implies one of the available projects
+- When uncertain, omit (return null) — do not guess
+- life and infra tasks rarely need a project
+
 Return scheduled/due as YYYY-MM-DD or null. If no explicit date, scheduled defaults to today.`
 }
 
