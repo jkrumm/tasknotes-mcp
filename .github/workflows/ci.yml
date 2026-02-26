@@ -18,12 +18,24 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: registry.jkrumm.com/tasknotes-mcp
+          tags: type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=tasknotes-mcp
+            org.opencontainers.image.description=TaskNotes MCP server and Elysia API for Obsidian vault tasks
+            org.opencontainers.image.url=https://github.com/jkrumm/tasknotes-mcp
+            org.opencontainers.image.source=https://github.com/jkrumm/tasknotes-mcp
+
       - uses: docker/build-push-action@v6
         with:
           context: server
           file: server/Dockerfile
           push: true
-          tags: registry.jkrumm.com/tasknotes-mcp:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: COMMIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
