@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 import { fetchFilterOptions } from '@/lib/tasknotes-client'
-import pkg from '../package.json'
+import pkg from '../../package.json'
 
 export const healthApi = new Elysia()
   .get('/health', async () => {
