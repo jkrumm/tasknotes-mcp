@@ -7,16 +7,6 @@
   "author": "jkrumm",
   "categories": ["Productivity"],
   "license": "MIT",
-  "preferences": [
-    {
-      "name": "apiBaseUrl",
-      "title": "API Base URL",
-      "description": "TaskNotes backend URL",
-      "type": "textfield",
-      "required": true,
-      "default": "https://tasknotes.jkrumm.com"
-    }
-  ],
   "commands": [
     {
       "name": "list-tasks",

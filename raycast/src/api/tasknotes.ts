@@ -1,7 +1,6 @@
-import { getPreferenceValues, showToast, Toast } from "@raycast/api";
+import { showToast, Toast } from "@raycast/api";
 
-const { apiBaseUrl } = getPreferenceValues<{ apiBaseUrl: string }>();
-const BASE_URL = apiBaseUrl.replace(/\/$/, "");
+const BASE_URL = "https://tasknotes.jkrumm.com";
 
 // ============================================================================
 // Types
@@ -66,13 +65,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       headers: { "Content-Type": "application/json" },
       ...options,
     });
-  } catch {
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
     await showToast({
       style: Toast.Style.Failure,
       title: "TaskNotes server unreachable",
-      message: `Cannot connect to ${BASE_URL}`,
+      message: detail,
     });
-    throw new Error("TaskNotes API unreachable");
+    throw new Error(`TaskNotes API unreachable: ${detail}`);
   }
 
   if (!response.ok) {
@@ -126,6 +126,13 @@ export async function nlpParse(text: string): Promise<NlpParseResult> {
   });
 }
 
+export async function nlpCreate(text: string): Promise<Task> {
+  return request<Task>("/nlp/create", {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
+
 export async function getFilterOptions(): Promise<{ projects: string[] }> {
   return request<{ projects: string[] }>("/filter-options");
 }
@@ -150,8 +157,23 @@ export function isDueToday(dateStr: string | null): boolean {
 
 export function formatDueDate(dateStr: string | null): string | undefined {
   if (!dateStr) return undefined;
-  const date = new Date(dateStr + "T00:00:00");
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const todayStr = today();
+  if (dateStr === todayStr) return "Today";
+
+  if (dateStr > todayStr) {
+    const tomorrow = new Date(todayStr + "T00:00:00");
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    if (dateStr === tomorrowStr) return "Tomorrow";
+
+    const sevenDaysOut = new Date(todayStr + "T00:00:00");
+    sevenDaysOut.setDate(sevenDaysOut.getDate() + 7);
+    if (dateStr <= sevenDaysOut.toISOString().slice(0, 10)) {
+      return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" });
+    }
+  }
+
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function openInObsidian(taskId: string): void {
