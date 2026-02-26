@@ -32,4 +32,4 @@ jobs:
           curl -sf -X POST https://rollhook-homelab.jkrumm.com/deploy/tasknotes-mcp \
             -H "Authorization: Bearer ${{ secrets.ROLLHOOK_WEBHOOK_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"image_tag":"latest"}'
+            -d '{"image_tag":"registry.jkrumm.com/tasknotes-mcp:latest"}'
