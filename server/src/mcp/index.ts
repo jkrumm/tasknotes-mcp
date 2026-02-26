@@ -4,7 +4,11 @@ import { z } from 'zod'
 import { fetchFilterOptions, fetchTask, fetchTasks, patchTask, postTask } from '@/lib/tasknotes-client'
 import { parseWithGemini } from '@/lib/gemini'
 
-const mcp = new McpServer({ name: 'tasknotes', version: '0.1.0' })
+const mcp = new McpServer({
+  name: 'tasknotes',
+  version: '0.1.0',
+  schemaAdapter: (schema) => z.toJSONSchema(schema as z.ZodType),
+})
 
 mcp.tool('list_tasks', {
   description: 'List tasks with optional filters',
