@@ -24,6 +24,7 @@ jobs:
           file: server/Dockerfile
           push: true
           tags: registry.jkrumm.com/tasknotes-mcp:latest
+          build-args: COMMIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
