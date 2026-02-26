@@ -1,10 +1,10 @@
 import { Elysia } from 'elysia'
-import { MCPServer, StreamableHttpTransport } from 'mcp-lite'
+import { McpServer, StreamableHttpTransport } from 'mcp-lite'
 import { z } from 'zod'
 import { fetchFilterOptions, fetchTask, fetchTasks, patchTask, postTask } from '@/lib/tasknotes-client'
 import { parseWithGemini } from '@/lib/gemini'
 
-const mcp = new MCPServer({ name: 'tasknotes', version: '0.1.0' })
+const mcp = new McpServer({ name: 'tasknotes', version: '0.1.0' })
 
 mcp.tool('list_tasks', {
   description: 'List tasks with optional filters',
@@ -109,9 +109,10 @@ mcp.tool('get_filter_options', {
   },
 })
 
-const transport = new StreamableHttpTransport({ mcp })
+const transport = new StreamableHttpTransport()
+const mcpFetch = transport.bind(mcp)
 
 export const mcpHandler = new Elysia()
-  .all('/mcp', ({ request }) => transport.handleRequest(request), {
+  .all('/mcp', ({ request }) => mcpFetch(request), {
     detail: { summary: 'MCP StreamableHTTP endpoint', tags: ['MCP'] },
   })
