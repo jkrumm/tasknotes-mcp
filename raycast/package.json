@@ -1,0 +1,66 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "tasknotes",
+  "title": "TaskNotes",
+  "description": "Manage your TaskNotes tasks from Raycast — list, create, and quick-add tasks in your Obsidian vault.",
+  "icon": "extension-icon.png",
+  "author": "jkrumm",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "preferences": [
+    {
+      "name": "apiBaseUrl",
+      "title": "API Base URL",
+      "description": "TaskNotes backend URL",
+      "type": "textfield",
+      "required": true,
+      "default": "https://tasknotes.jkrumm.com"
+    }
+  ],
+  "commands": [
+    {
+      "name": "list-tasks",
+      "title": "My Tasks",
+      "description": "View and manage your TaskNotes tasks grouped by context",
+      "mode": "view"
+    },
+    {
+      "name": "add-task",
+      "title": "Add Task",
+      "description": "Create a new task with structured fields",
+      "mode": "view"
+    },
+    {
+      "name": "quick-add",
+      "title": "Quick Add",
+      "description": "Add a task using natural language",
+      "mode": "view"
+    },
+    {
+      "name": "help",
+      "title": "TaskNotes Help",
+      "description": "Keyboard shortcuts, contexts, and usage reference",
+      "mode": "view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.90.0",
+    "@raycast/utils": "^1.17.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+"@types/node": "^22.0.0",
+    "@types/react": "19.0.10",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.4.5"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
