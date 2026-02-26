@@ -27,9 +27,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy via rollhook
-        run: |
-          curl -sf -X POST https://rollhook.jkrumm.com/deploy/tasknotes-mcp \
-            -H "Authorization: Bearer ${{ secrets.ROLLHOOK_WEBHOOK_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{"image_tag":"latest"}'
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOMELAB_SSH_HOST }}
+          username: jkrumm
+          key: ${{ secrets.HOMELAB_SSH_KEY }}
+          script: |
+            cd ~/homelab
+            docker compose pull tasknotes
+            docker compose up -d tasknotes
