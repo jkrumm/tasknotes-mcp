@@ -28,16 +28,7 @@ import AddTask from "./add-task";
 // Filter types
 // ============================================================================
 
-type FilterOption = "all" | TaskContext | "today";
-
-const FILTER_OPTIONS: { value: FilterOption; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "dev", label: "Dev" },
-  { value: "work", label: "Work" },
-  { value: "life", label: "Life" },
-  { value: "infra", label: "Infra" },
-  { value: "today", label: "Today" },
-];
+type FilterOption = "all" | TaskContext | "today" | "priority:high" | "priority:normal" | "priority:low";
 
 // ============================================================================
 // Visual helpers
@@ -50,27 +41,49 @@ const CONTEXT_COLOR: Record<TaskContext, Color> = {
   infra: Color.Purple,
 };
 
-const PRIORITY_ICON: Record<string, { source: Icon; tintColor: Color }> = {
-  high: { source: Icon.CircleFilled, tintColor: Color.Red },
-  normal: { source: Icon.CircleFilled, tintColor: Color.Yellow },
-  low: { source: Icon.CircleFilled, tintColor: Color.SecondaryText },
-};
-
-function statusIcon(status: Task["status"]): { source: Icon; tintColor?: Color } {
-  if (status === "in-progress") return { source: Icon.Bolt, tintColor: Color.Yellow };
-  return { source: Icon.Circle };
+function taskIcon(task: Task): { source: Icon; tintColor?: Color } {
+  switch (task.priority) {
+    case "high":
+      return { source: Icon.Circle, tintColor: Color.Red };
+    case "normal":
+      return { source: Icon.Circle, tintColor: Color.Yellow };
+    case "low":
+      return { source: Icon.Circle, tintColor: Color.SecondaryText };
+    default:
+      return { source: Icon.Circle };
+  }
 }
 
 function taskAccessories(task: Task): List.Item.Accessory[] {
   const accessories: List.Item.Accessory[] = [];
 
-  if (task.priority !== "none" && PRIORITY_ICON[task.priority]) {
-    accessories.push({ icon: PRIORITY_ICON[task.priority] });
+  if (task.contexts.length > 0) {
+    accessories.push({ tag: { value: task.contexts[0], color: CONTEXT_COLOR[task.contexts[0]] } });
   }
 
-  if (task.projects.length > 0) {
-    const name = extractProjectName(task.projects[0]);
-    accessories.push({ tag: { value: name, color: Color.SecondaryText } });
+  if (task.timeEstimate) {
+    accessories.push({ text: task.timeEstimate, icon: Icon.Clock });
+  }
+
+  if (task.scheduled && task.scheduled !== task.due) {
+    accessories.push({
+      icon: { source: Icon.Calendar, tintColor: Color.SecondaryText },
+      tooltip: `Scheduled: ${task.scheduled}`,
+    });
+  }
+
+  if (task.isBlocked) {
+    accessories.push({
+      icon: { source: Icon.Lock, tintColor: Color.SecondaryText },
+      tooltip: "Blocked",
+    });
+  }
+
+  if (task.isBlocking) {
+    accessories.push({
+      icon: { source: Icon.ExclamationMark, tintColor: Color.Orange },
+      tooltip: "Blocking other tasks",
+    });
   }
 
   if (task.due) {
@@ -101,16 +114,19 @@ export default function ListTasks() {
   const loadTasks = useCallback(async () => {
     setIsLoading(true);
     try {
-      const contextFilter = CONTEXTS.includes(filter as TaskContext)
-        ? [filter as TaskContext]
-        : undefined;
-      const scheduledFilter = filter === "today" ? today() : undefined;
+      const isPriorityFilter = filter.startsWith("priority:");
+      const contextFilter =
+        !isPriorityFilter && CONTEXTS.includes(filter as TaskContext) ? [filter as TaskContext] : undefined;
+      const scheduledFilter = !isPriorityFilter && filter === "today" ? today() : undefined;
 
-      const fetched = await getTasks({
-        contexts: contextFilter,
-        scheduled: scheduledFilter,
-      });
-      setTasks(fetched);
+      const fetched = await getTasks({ contexts: contextFilter, scheduled: scheduledFilter });
+
+      if (isPriorityFilter) {
+        const priorityValue = filter.split(":")[1];
+        setTasks(fetched.filter((t) => t.priority === priorityValue));
+      } else {
+        setTasks(fetched);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -120,43 +136,37 @@ export default function ListTasks() {
     loadTasks();
   }, [loadTasks]);
 
-  const toggleInProgress = useCallback(
-    async (task: Task) => {
-      const newStatus = task.status === "in-progress" ? "open" : "in-progress";
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
-      try {
-        await updateTask(task.id, { status: newStatus });
-        await showToast({
-          style: Toast.Style.Success,
-          title: newStatus === "in-progress" ? "Started" : "Paused",
-          message: task.title,
-        });
-      } catch {
-        setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)));
-      }
-    },
-    []
-  );
+  const toggleInProgress = useCallback(async (task: Task) => {
+    const newStatus = task.status === "in-progress" ? "open" : "in-progress";
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
+    try {
+      await updateTask(task.id, { status: newStatus });
+      await showToast({
+        style: Toast.Style.Success,
+        title: newStatus === "in-progress" ? "Started" : "Paused",
+        message: task.title,
+      });
+    } catch {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)));
+    }
+  }, []);
 
-  const markDone = useCallback(
-    async (task: Task) => {
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      try {
-        await updateTask(task.id, { status: "done" });
-        await showToast({
-          style: Toast.Style.Success,
-          title: "Done",
-          message: task.title,
-        });
-      } catch {
-        setTasks((prev) => {
-          const next = [...prev, { ...task }];
-          return next.sort((a, b) => a.title.localeCompare(b.title));
-        });
-      }
-    },
-    []
-  );
+  const markDone = useCallback(async (task: Task) => {
+    setTasks((prev) => prev.filter((t) => t.id !== task.id));
+    try {
+      await updateTask(task.id, { status: "done" });
+      await showToast({
+        style: Toast.Style.Success,
+        title: "Done",
+        message: task.title,
+      });
+    } catch {
+      setTasks((prev) => {
+        const next = [...prev, { ...task }];
+        return next.sort((a, b) => a.title.localeCompare(b.title));
+      });
+    }
+  }, []);
 
   // Group tasks by context (in defined order)
   const grouped = CONTEXTS.reduce<Record<TaskContext, Task[]>>(
@@ -171,13 +181,20 @@ export default function ListTasks() {
     <List
       isLoading={isLoading}
       searchBarAccessory={
-        <List.Dropdown
-          tooltip="Filter by context"
-          onChange={(val) => setFilter(val as FilterOption)}
-        >
-          {FILTER_OPTIONS.map((opt) => (
-            <List.Dropdown.Item key={opt.value} value={opt.value} title={opt.label} />
-          ))}
+        <List.Dropdown tooltip="Filter tasks" onChange={(val) => setFilter(val as FilterOption)}>
+          <List.Dropdown.Section title="Context">
+            <List.Dropdown.Item value="all" title="All" />
+            <List.Dropdown.Item value="dev" title="Dev" />
+            <List.Dropdown.Item value="work" title="Work" />
+            <List.Dropdown.Item value="life" title="Life" />
+            <List.Dropdown.Item value="infra" title="Infra" />
+            <List.Dropdown.Item value="today" title="Today" />
+          </List.Dropdown.Section>
+          <List.Dropdown.Section title="Priority">
+            <List.Dropdown.Item value="priority:high" title="High Priority" />
+            <List.Dropdown.Item value="priority:normal" title="Normal Priority" />
+            <List.Dropdown.Item value="priority:low" title="Low Priority" />
+          </List.Dropdown.Section>
         </List.Dropdown>
       }
     >
@@ -189,8 +206,9 @@ export default function ListTasks() {
             {ctxTasks.map((task) => (
               <List.Item
                 key={task.id}
-                icon={statusIcon(task.status)}
+                icon={taskIcon(task)}
                 title={task.title}
+                subtitle={task.projects.length > 0 ? extractProjectName(task.projects[0]) : undefined}
                 accessories={taskAccessories(task)}
                 actions={
                   <ActionPanel>
